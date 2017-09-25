@@ -1,0 +1,10 @@
+{
+	"extDesc": {
+		"message": "Zeigt die Beschreibung von YouTube™ Videos in Gmail™ an.",
+		"description": "Extension description."
+	},
+	"extName": {
+		"message": "YouTube™ Beschreibung für Gmail™",
+		"description": "Extension name."
+	}
+}
