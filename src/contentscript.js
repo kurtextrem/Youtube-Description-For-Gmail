@@ -3,47 +3,55 @@
 
 	const document = window.document
 
-	const label = /#label\/.+\/.+/,
-		inbox = /#(inbox|imp|all)\/.+/,
+	const label = /#label(?:\/.+){2}/,
+		inbox = /#(inbox|imp|al{2})\/.+/,
 		fulldesc = /"},"description":{"runs":\[{"text":("((?!"}).)+")}/,
-		shortdesc = /,"shortDescription":("[^"]+")/,
+		shortdesc = /,"shortDescription":("(?:[^"]+|\\")+"),/,
 		quote = /"/g,
 		prevElems = new WeakSet()
+	let matched = false
 	function hashChange() {
 		const hash = document.location.hash
-		if (!label.test(hash) && !inbox.test(hash)) return
+		if (!label.test(hash) && !inbox.test(hash)) return freeRegExp()
 
 		const elems = document.querySelectorAll('table[class$="video-spotlight-width"]:not([aria-label])')
 		for (let i = 0; i < elems.length; ++i) {
-			let elem = elems[i]
+			const elem = elems[i]
 			if (prevElems.has(elem)) {
 				prevElems.delete(elem)
 				continue
 			}
 			prevElems.add(elem)
 
-			const url = elem.querySelector('a.nonplayable').href
-
-			elem = elem.querySelector('tbody > tr:nth-of-type(4) > td > table > tbody > tr > td')
-			console.log(elem, url)
-			if (elem) {
-				fetch(url)
-					.then(function update(text) {
-						let match = text.match(shortdesc)
-						if (match && match.length > 1) elem.innerText = JSON.parse(match[1]).replace(quote, '') || ''
-						else {
-							match = text.match(fulldesc)
-							elem.innerText = (match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) || ''
-						}
-
-						elem = null
-						return text
-					})
-					.catch(function error(e) {
-						elem = null
-					})
-			}
+			fetchAndMatch(
+				elem.querySelector('a.nonplayable').href,
+				elem.querySelector('tbody > tr:nth-of-type(4) > td > table > tbody > tr > td')
+			)
 		}
+	}
+
+	function fetchAndMatch(url, elem) {
+		if (elem === null) return
+
+		fetch(url)
+			.then(update.bind(undefined, elem))
+			.catch(error)
+	}
+
+	function update(elem, html) {
+		let match = html.match(shortdesc)
+		if (match && match.length > 1) elem.innerText = JSON.parse(match[1]).replace(quote, '') || ''
+		else {
+			match = html.match(fulldesc)
+			elem.innerText = (match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) || ''
+		}
+
+		matched = true
+		return html
+	}
+
+	function error(e) {
+		console.error(e)
 	}
 
 	function checkStatus(response) {
@@ -65,6 +73,13 @@
 			.fetch(url)
 			.then(checkStatus)
 			.then(text)
+	}
+
+	function freeRegExp() {
+		if (!matched) return
+
+		matched = false
+		;/\s*/g.exec('')
 	}
 
 	/**
