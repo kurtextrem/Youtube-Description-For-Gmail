@@ -5,14 +5,14 @@
 
 	const label = /#label(?:\/.+){2}/,
 		inbox = /#(inbox|imp|al{2})\/.+/,
-		fulldesc = /"},"description":{"runs":\[{"text":("((?!"}).)+")}/,
-		shortdesc = /,"shortDescription":("(?:[^"]+|\\")+"),/,
+		fulldesc = /"},"description":{"runs":\[{"text":("(?:[^"\\]|\\.)+")}/,
+		shortdesc = /,"shortDescription":("(?:[^"\\]|\\.)+"),/,
 		quote = /"/g,
 		prevElems = new WeakSet()
 	let matched = false
 	function hashChange() {
 		const hash = document.location.hash
-		if (!label.test(hash) && !inbox.test(hash)) return freeRegExp()
+		if (!label.test(hash) && !inbox.test(hash)) return free()
 
 		const elems = document.querySelectorAll('table[class$="video-spotlight-width"]:not([aria-label])')
 		for (let i = 0; i < elems.length; ++i) {
@@ -75,11 +75,13 @@
 			.then(text)
 	}
 
-	function freeRegExp() {
+	function free() {
 		if (!matched) return
 
 		matched = false
 		;/\s*/g.exec('')
+	}
+
 	}
 
 	/**
