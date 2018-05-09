@@ -8,8 +8,10 @@
 		fulldesc = /"},"description":{"runs":\[{"text":("(?:[^"\\]|\\.)+")}/,
 		shortdesc = /,"shortDescription":("(?:[^"\\]|\\.)+"),/,
 		quote = /"/g,
-		prevElems = new WeakSet()
+		prevElems = new WeakSet(), // sometimes Gmail has the old mail still in DOM, so we cache them
+		cacheMap = new Map()
 	let matched = false
+
 	function hashChange() {
 		const hash = document.location.hash
 		if (!label.test(hash) && !inbox.test(hash)) return free()
@@ -23,18 +25,21 @@
 			}
 			prevElems.add(elem)
 
-			fetchAndMatch(
-				elem.querySelector('a.nonplayable').href,
-				elem.querySelector('tbody > tr:nth-of-type(4) > td > table > tbody > tr > td')
-			)
+			fetchFromElem(elem)
 		}
 	}
 
-	function fetchAndMatch(url, elem) {
-		if (elem === null) return
+	function fetchFromElem(elem) {
+		if (elem === null || elem.classList.contains('gmail-yt--matched')) return
 
-		fetch(url)
-			.then(update.bind(undefined, elem))
+		const href = elem.querySelector('a.nonplayable').href,
+			el = elem.querySelector('tbody > tr:nth-of-type(4) > td > table > tbody > tr > td')
+
+		if (cacheMap.has(href)) return update(el, cacheMap.get(href))
+
+		fetch(href)
+			.then(update.bind(undefined, el))
+			.then(cache.bind(undefined, href))
 			.catch(error)
 	}
 
@@ -45,9 +50,14 @@
 			match = html.match(fulldesc)
 			elem.innerText = (match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) || ''
 		}
+		elem.classList.add('gmail-yt--matched')
 
 		matched = true
 		return html
+	}
+
+	function cache(href, html) {
+		cacheMap.set(href, html)
 	}
 
 	function error(e) {
@@ -80,8 +90,21 @@
 
 		matched = false
 		;/\s*/g.exec('')
+		cacheMap.clear()
 	}
 
+	let observer
+	function observe() {
+		observer = new MutationObserver(function(mutations) {
+			for (let i = 0; i < mutations.length; ++i) {
+				var mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
+				if (mutation !== null) fetchFromElem(mutation)
+			}
+		})
+		observer.observe(document.querySelector('div[id=":5"] + div'), {
+			subtree: true,
+			childList: true,
+		})
 	}
 
 	/**
@@ -92,7 +115,14 @@
 	 */
 	function addListener() {
 		/** hashchanges */
-		window.addEventListener('hashchange', hashChange, false)
+		window.addEventListener(
+			'hashchange',
+			function() {
+				if (observer === undefined) observe()
+				window.setTimeout(hashChange, 700) // 800
+			},
+			false
+		)
 	}
 
 	addListener()
