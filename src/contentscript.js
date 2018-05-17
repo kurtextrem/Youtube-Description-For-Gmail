@@ -43,6 +43,13 @@
 			.catch(error)
 	}
 
+	function fetch(url) {
+		return window
+			.fetch(url, { cache: 'force-cache' })
+			.then(checkStatus)
+			.then(text)
+	}
+
 	function update(elem, html) {
 		let match = html.match(shortdesc)
 		if (match && match.length > 1) elem.innerText = JSON.parse(match[1]).replace(quote, '') || ''
@@ -58,6 +65,7 @@
 
 	function cache(href, html) {
 		cacheMap.set(href, html)
+		return html
 	}
 
 	function error(e) {
@@ -78,13 +86,6 @@
 		return response.text()
 	}
 
-	function fetch(url) {
-		return window
-			.fetch(url)
-			.then(checkStatus)
-			.then(text)
-	}
-
 	function free() {
 		if (!matched) return
 
@@ -97,8 +98,8 @@
 	function observe() {
 		observer = new MutationObserver(function(mutations) {
 			for (let i = 0; i < mutations.length; ++i) {
-				var mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
-				if (mutation !== null) fetchFromElem(mutation)
+				const mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
+				if (mutation !== null) window.setTimeout(() => fetchFromElem(mutation), 0)
 			}
 		})
 		observer.observe(document.querySelector('div[id=":5"] + div'), {
@@ -119,7 +120,8 @@
 			'hashchange',
 			function() {
 				if (observer === undefined) observe()
-				window.setTimeout(hashChange, 700) // 800
+				hashChange()
+				// window.setTimeout(hashChange, 700) // 800
 			},
 			false
 		)
