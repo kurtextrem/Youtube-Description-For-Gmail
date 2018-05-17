@@ -70,6 +70,7 @@
 
 	function error(e) {
 		console.error(e)
+		return e
 	}
 
 	function checkStatus(response) {
@@ -121,7 +122,6 @@
 			function() {
 				if (observer === undefined) observe()
 				hashChange()
-				// window.setTimeout(hashChange, 700) // 800
 			},
 			false
 		)
