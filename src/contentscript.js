@@ -8,26 +8,8 @@
 		fulldesc = /"},"description":{"runs":\[{"text":("(?:[^"\\]|\\.)+")}/,
 		shortdesc = /,"shortDescription":("(?:[^"\\]|\\.)+"),/,
 		quote = /"/g,
-		prevElems = new WeakSet(), // sometimes Gmail has the old mail still in DOM, so we cache them
 		cacheMap = new Map()
 	let matched = false
-
-	function hashChange() {
-		const hash = document.location.hash
-		if (!label.test(hash) && !inbox.test(hash)) return free()
-
-		const elems = document.querySelectorAll('table[class$="video-spotlight-width"]:not([aria-label])')
-		for (let i = 0; i < elems.length; ++i) {
-			const elem = elems[i]
-			if (prevElems.has(elem)) {
-				prevElems.delete(elem)
-				continue
-			}
-			prevElems.add(elem)
-
-			fetchFromElem(elem)
-		}
-	}
 
 	function fetchFromElem(elem) {
 		if (elem === null || elem.classList.contains('gmail-yt--matched')) return
@@ -98,6 +80,9 @@
 	let observer
 	function observe() {
 		observer = new MutationObserver(function(mutations) {
+			const hash = document.location.hash
+			if (!label.test(hash) && !inbox.test(hash)) return window.requestIdleCallback(free)
+
 			for (let i = 0; i < mutations.length; ++i) {
 				const mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
 				if (mutation !== null) window.setTimeout(() => fetchFromElem(mutation), 0)
@@ -117,14 +102,9 @@
 	 */
 	function addListener() {
 		/** hashchanges */
-		window.addEventListener(
-			'hashchange',
-			function() {
-				if (observer === undefined) observe()
-				hashChange()
-			},
-			false
-		)
+		window.addEventListener('DOMContentLoaded', function() {
+			if (observer === undefined) observe()
+		})
 	}
 
 	addListener()
