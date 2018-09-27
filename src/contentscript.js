@@ -9,7 +9,9 @@
 		shortdesc = /,"shortDescription":("(?:[^"\\]|\\.)+"),/,
 		quote = /"/g,
 		cacheMap = new Map()
-	let matched = false
+	let regexUsed = false
+
+	const fetchFromElemThrottled = throttle(fetchFromElem, 250)
 
 	function fetchFromElem(elem) {
 		if (elem === null || elem.classList.contains('gmail-yt--matched')) return
@@ -20,6 +22,7 @@
 		if (cacheMap.has(href)) return update(el, cacheMap.get(href))
 
 		fetch(href)
+			.then(parse)
 			.then(update.bind(undefined, el))
 			.then(cache.bind(undefined, href))
 			.catch(error)
@@ -29,20 +32,27 @@
 		return window
 			.fetch(url, { cache: 'force-cache' })
 			.then(checkStatus)
-			.then(text)
+			.then(toText)
 	}
 
-	function update(elem, html) {
+	function parse(html) {
 		let match = html.match(shortdesc)
-		if (match && match.length > 1) elem.innerText = JSON.parse(match[1]).replace(quote, '') || ''
-		else {
+		let ret = ''
+		if (match && match.length > 1) {
+			ret = JSON.parse(match[1]).replace(quote, '') || ''
+		} else {
 			match = html.match(fulldesc)
-			elem.innerText = (match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) || ''
+			ret = (match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) || ''
 		}
-		elem.classList.add('gmail-yt--matched')
 
-		matched = true
-		return html
+		regexUsed = true
+		return ret
+	}
+
+	function update(elem, text) {
+		elem.innerText = text
+		elem.classList.add('gmail-yt--matched')
+		return text
 	}
 
 	function cache(href, html) {
@@ -65,33 +75,58 @@
 		throw error
 	}
 
-	function text(response) {
+	function toText(response) {
 		return response.text()
 	}
 
 	function free() {
-		if (!matched) return
+		if (!regexUsed) return
 
-		matched = false
+		regexUsed = false
 		;/\s*/g.exec('')
-		cacheMap.clear()
 	}
 
 	let observer
 	function observe() {
-		observer = new MutationObserver(function(mutations) {
-			const hash = document.location.hash
-			if (!label.test(hash) && !inbox.test(hash)) return window.requestIdleCallback(free)
+		const div = document.querySelector('div[id=":5"] + div')
+		if (div === null) return
 
-			for (let i = 0; i < mutations.length; ++i) {
-				const mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
-				if (mutation !== null) window.setTimeout(() => fetchFromElem(mutation), 0)
-			}
-		})
-		observer.observe(document.querySelector('div[id=":5"] + div'), {
+		observer = new MutationObserver(throttle(handleMutations, 100))
+		observer.observe(div, {
 			subtree: true,
 			childList: true,
 		})
+	}
+
+	function handleMutations(mutations) {
+		const hash = document.location.hash
+		if (!label.test(hash) && !inbox.test(hash)) return free()
+
+		console.log('observer')
+		for (let i = 0; i < mutations.length; ++i) {
+			const mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
+			if (mutation !== null) fetchFromElemThrottled(mutation)
+		}
+	}
+
+	function throttle(callback, wait = 100) {
+		let time
+		let lastFunc
+
+		return function throttle(...args) {
+			if (time === undefined) {
+				callback.apply(this, args)
+				time = Date.now()
+			} else {
+				clearTimeout(lastFunc)
+				lastFunc = setTimeout(() => {
+					if (Date.now() - time >= wait) {
+						callback.apply(this, args)
+						time = Date.now()
+					}
+				}, wait - (Date.now() - time))
+			}
+		}
 	}
 
 	/**
@@ -102,8 +137,10 @@
 	 */
 	function addListener() {
 		/** hashchanges */
-		window.addEventListener('DOMContentLoaded', function() {
-			if (observer === undefined) observe()
+		window.addEventListener('load', function() {
+			if (observer !== undefined) observer.disconnect()
+			observe()
+			window.setInterval(() => cacheMap.clear(), 600000)
 		})
 	}
 
