@@ -102,10 +102,9 @@
 		const hash = document.location.hash
 		if (!label.test(hash) && !inbox.test(hash)) return free()
 
-		console.log('observer')
 		for (let i = 0; i < mutations.length; ++i) {
-			const mutation = mutations[i].target.querySelector('table[class$="video-spotlight-width"]:not([aria-label])')
-			if (mutation !== null) fetchFromElemThrottled(mutation)
+			const mutation = mutations[i].target.querySelectorAll('table[class$="video-spotlight-width"]:not([aria-label])')
+			for (let x = 0; x < mutation.length; ++x) fetchFromElemThrottled(mutation[x])
 		}
 	}
 
