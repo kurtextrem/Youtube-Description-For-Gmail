@@ -17,7 +17,9 @@
 		if (elem === null || elem.classList.contains('gmail-yt--matched')) return
 
 		const href = elem.querySelector('a.nonplayable').href,
-			el = elem.querySelector('tbody > tr:nth-of-type(4) > td > table > tbody > tr > td')
+			el = elem.querySelector(
+				'tbody > tr:nth-of-type(4) > td > table > tbody > tr > td'
+			)
 
 		if (cacheMap.has(href)) return update(el, cacheMap.get(href))
 
@@ -42,7 +44,11 @@
 			ret = JSON.parse(match[1]).replace(quote, '') || ''
 		} else {
 			match = html.match(fulldesc)
-			ret = (match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) || ''
+			ret =
+				(match &&
+					match.length > 1 &&
+					JSON.parse(match[1]).replace(quote, '')) ||
+				''
 		}
 
 		regexUsed = true
@@ -91,7 +97,7 @@
 		const div = document.querySelector('div[id=":5"] + div')
 		if (div === null) return
 
-		observer = new MutationObserver(throttle(handleMutations, 100))
+		observer = new MutationObserver(throttle(handleMutations, 50))
 		observer.observe(div, {
 			subtree: true,
 			childList: true,
@@ -103,8 +109,11 @@
 		if (!label.test(hash) && !inbox.test(hash)) return free()
 
 		for (let i = 0; i < mutations.length; ++i) {
-			const mutation = mutations[i].target.querySelectorAll('table[class$="video-spotlight-width"]:not([aria-label])')
-			for (let x = 0; x < mutation.length; ++x) fetchFromElemThrottled(mutation[x])
+			const mutation = mutations[i].target.querySelectorAll(
+				'table[class$="video-spotlight-width"]:not([aria-label])'
+			)
+			for (let x = 0; x < mutation.length; ++x)
+				fetchFromElemThrottled(mutation[x])
 		}
 	}
 
