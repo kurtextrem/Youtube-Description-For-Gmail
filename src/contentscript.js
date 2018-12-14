@@ -8,26 +8,34 @@
 		fulldesc = /"},"description":{"runs":\[{"text":("(?:[^"\\]|\\.)+")}/,
 		shortdesc = /,"shortDescription":("(?:[^"\\]|\\.)+"),/,
 		quote = /"/g,
-		cacheMap = new Map()
+		cacheMap = new Map(),
+		fetchMap = new Map()
 	let regexUsed = false
 
-	const fetchFromElemThrottled = throttle(fetchFromElem, 250)
-
 	function fetchFromElem(elem) {
-		if (elem === null || elem.classList.contains('gmail-yt--matched')) return
+		if (elem === null) return
 
 		const href = elem.querySelector('a.nonplayable').href,
 			el = elem.querySelector(
 				'tbody > tr:nth-of-type(4) > td > table > tbody > tr > td'
 			)
 
-		if (cacheMap.has(href)) return update(el, cacheMap.get(href))
+		const maybePromise = fetchMap.get(href)
+		if (maybePromise !== undefined) {
+			maybePromise.then(update.bind(undefined, el)).catch(error)
+			fetchMap.delete(href)
+			return
+		}
 
-		fetch(href)
-			.then(parse)
-			.then(update.bind(undefined, el))
-			.then(cache.bind(undefined, href))
-			.catch(error)
+		if (cacheMap.has(href)) update(el, cacheMap.get(href))
+		else {
+			const promise = fetch(href)
+				.then(parse)
+				.then(update.bind(undefined, el))
+				.then(cache.bind(undefined, href))
+				.catch(error)
+			fetchMap.set(href, promise)
+		}
 	}
 
 	function fetch(url) {
@@ -57,7 +65,7 @@
 
 	function update(elem, text) {
 		elem.innerText = text
-		elem.classList.add('gmail-yt--matched')
+		//console.log('added text')
 		return text
 	}
 
@@ -97,7 +105,7 @@
 		const div = document.querySelector('div[id=":5"] + div')
 		if (div === null) return
 
-		observer = new MutationObserver(throttle(handleMutations, 50))
+		observer = new MutationObserver(handleMutations)
 		observer.observe(div, {
 			subtree: true,
 			childList: true,
@@ -106,33 +114,22 @@
 
 	function handleMutations(mutations) {
 		const hash = document.location.hash
-		if (!label.test(hash) && !inbox.test(hash)) return free()
+		if (!label.test(hash) && !inbox.test(hash)) {
+			free()
+			return
+		}
 
+		//console.log('mutation', hash)
 		for (let i = 0; i < mutations.length; ++i) {
 			const mutation = mutations[i].target.querySelectorAll(
 				'table[class$="video-spotlight-width"]:not([aria-label])'
 			)
-			for (let x = 0; x < mutation.length; ++x)
-				fetchFromElemThrottled(mutation[x])
-		}
-	}
-
-	function throttle(callback, wait = 100) {
-		let time
-		let lastFunc
-
-		return function throttle(...args) {
-			if (time === undefined) {
-				callback.apply(this, args)
-				time = Date.now()
-			} else {
-				clearTimeout(lastFunc)
-				lastFunc = setTimeout(() => {
-					if (Date.now() - time >= wait) {
-						callback.apply(this, args)
-						time = Date.now()
-					}
-				}, wait - (Date.now() - time))
+			for (let x = 0; x < mutation.length; ++x) {
+				const current = mutation[x]
+				if (!current.classList.contains('gmail-yt--matched')) {
+					current.classList.add('gmail-yt--matched')
+					fetchFromElem(current)
+				}
 			}
 		}
 	}
@@ -148,7 +145,10 @@
 		window.addEventListener('load', function() {
 			if (observer !== undefined) observer.disconnect()
 			observe()
-			window.setInterval(() => cacheMap.clear(), 600000)
+			window.setInterval(() => {
+				cacheMap.clear()
+				fetchMap.clear()
+			}, 600000)
 		})
 	}
 
