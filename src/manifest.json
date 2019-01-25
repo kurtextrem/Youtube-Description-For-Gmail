@@ -1,6 +1,6 @@
 {
 	"name": "__MSG_extName__",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"manifest_version": 2,
 
 	"description": "__MSG_extDesc__",
@@ -12,6 +12,10 @@
 	},
 	"author": "Jacob „kurtextrem\" Groß",
 
+	"background": {
+		"scripts": ["background.js"],
+		"persistent": false
+	},
 	"content_scripts": [
 		{
 			"matches": ["*://mail.google.com/*"],
@@ -22,5 +26,9 @@
 	],
 	"minimum_chrome_version": "49",
 
-	"permissions": ["*://mail.google.com/*", "*://*.youtube.com/*", "*://youtube.com/*"]
+	"permissions": [
+		"*://mail.google.com/*",
+		"*://*.youtube.com/*",
+		"*://youtube.com/*"
+	]
 }
