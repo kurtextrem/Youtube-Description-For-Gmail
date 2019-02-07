@@ -54,8 +54,14 @@ function cache(key, html) {
 
 let observer
 function observe() {
-	const div = document.querySelector('div[id=":5"] + div')
-	if (div === null) return
+	let div = document.querySelector('div[id=":4"] + div')
+	if (div === null) {
+		div = document.querySelector('div[id=":5"] + div')
+		if (div === null) {
+			console.warn('no div found')
+			return
+		}
+	}
 
 	observer = new MutationObserver(handleMutations)
 	observer.observe(div, {
