@@ -17,32 +17,35 @@ function fetchFromBackground(path) {
 	})
 }
 
-function fetchFromElem(elem) {
-	if (elem === null) return
+function fetchFromElement(element) {
+	if (element === null) return
 
-	const path = elem.querySelector('a.nonplayable').href.match(urlRegex)[1],
-		el = elem.querySelector(
+	const path = element.querySelector('a.nonplayable').href.match(urlRegex)[1],
+		element_ = element.querySelector(
 			'tbody > tr:nth-of-type(4) > td > table > tbody > tr > td'
 		)
 
 	const maybePromise = fetchMap.get(path)
 	if (maybePromise !== undefined) {
-		maybePromise.then(update.bind(undefined, el))
+		maybePromise.then(update.bind(undefined, element_))
 		fetchMap.delete(path)
 		return
 	}
 
-	if (cacheMap.has(path)) update(el, cacheMap.get(path))
+	if (cacheMap.has(path)) update(element_, cacheMap.get(path))
 	else {
 		const promise = fetchFromBackground(path)
-			.then(update.bind(undefined, elem))
+			.then(update.bind(undefined, element_))
 			.then(cache.bind(undefined, path))
 		fetchMap.set(path, promise)
 	}
 }
 
-function update(elem, text) {
-	elem.innerText = text
+function update(element, text) {
+	const hash = document.location.hash
+	if (!label.test(hash) && !inbox.test(hash)) return text
+
+	element.textContent = text
 	//console.log('added text')
 	return text
 }
@@ -79,11 +82,10 @@ function handleMutations(mutations) {
 		const mutation = mutations[i].target.querySelectorAll(
 			'table[class$="video-spotlight-width"]:not([aria-label])'
 		)
-		for (let x = 0; x < mutation.length; ++x) {
-			const current = mutation[x]
+		for (const current of mutation) {
 			if (!current.classList.contains('gmail-yt--matched')) {
 				current.classList.add('gmail-yt--matched')
-				fetchFromElem(current)
+				fetchFromElement(current)
 			}
 		}
 	}
