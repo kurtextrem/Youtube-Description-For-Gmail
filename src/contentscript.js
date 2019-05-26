@@ -17,6 +17,11 @@ function fetchFromBackground(path) {
 	})
 }
 
+function error(e) {
+	console.error(e)
+	return e
+}
+
 function fetchFromElement(element) {
 	if (element === null) return
 
@@ -27,7 +32,7 @@ function fetchFromElement(element) {
 
 	const maybePromise = fetchMap.get(path)
 	if (maybePromise !== undefined) {
-		maybePromise.then(update.bind(undefined, element_))
+		maybePromise.then(update.bind(undefined, element_)).catch(error)
 		fetchMap.delete(path)
 		return
 	}
@@ -37,6 +42,7 @@ function fetchFromElement(element) {
 		const promise = fetchFromBackground(path)
 			.then(update.bind(undefined, element_))
 			.then(cache.bind(undefined, path))
+			.catch(error)
 		fetchMap.set(path, promise)
 	}
 }
@@ -45,7 +51,7 @@ function update(element, text) {
 	const hash = document.location.hash
 	if (!label.test(hash) && !inbox.test(hash)) return text
 
-	element.textContent = text
+	element.innerText = text // .textContent doesn't honor new lines
 	//console.log('added text')
 	return text
 }

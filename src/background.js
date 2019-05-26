@@ -1,6 +1,6 @@
 'use strict'
 
-const opts = {
+const options = {
 	cache: 'force-cache',
 	headers: new Headers({
 		Connection: 'keep-alive',
@@ -8,10 +8,9 @@ const opts = {
 }
 
 function fetchCache(url) {
-	return fetch(url, opts)
+	return fetch(url, options)
 		.then(checkStatus)
 		.then(toText)
-		.catch(error)
 }
 
 const fulldesc = /"},"description":{"runs":\[{"text":("(?:[^"\\]|\\.)+")}/,
@@ -22,18 +21,18 @@ let regexUsed = false
 
 function parse(html) {
 	let match = html.match(shortdesc)
-	let ret = ''
+	let returnValue = ''
 	if (match && match.length > 1) {
-		ret = JSON.parse(match[1]).replace(quote, '') || ''
+		returnValue = JSON.parse(match[1]).replace(quote, '') || ''
 	} else {
 		match = html.match(fulldesc)
-		ret =
+		returnValue =
 			(match && match.length > 1 && JSON.parse(match[1]).replace(quote, '')) ||
 			''
 	}
 
 	regexUsed = true
-	return ret
+	return returnValue
 }
 
 function checkStatus(response) {
@@ -68,6 +67,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	)
 		.then(parse)
 		.then(sendResponse)
+		.catch(error)
 
 	return true
 })
